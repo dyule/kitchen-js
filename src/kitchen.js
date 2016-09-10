@@ -1,13 +1,71 @@
 (function(global) {
     document.addEventListener("DOMContentLoaded", function() {
         var connection = new autobahn.Connection({
-            url: "ws://127.0.0.1:8090",
+            url: "ws://kitchen.cs.dal.ca:8090",
             realm: "kitchen_realm"
         });
         connection.onopen = function(session){
             var fileset;
-
+            var stamper;
+            var fileUpdater;
+            var currentFile;
             var currentPath = [];
+            var diff = new Diff();
+            var oldContent = "";
+            var diffTimer;
+            var siteID = 2;
+            var fileEditor = document.getElementById("file_editor");
+            fileEditor.addEventListener("keyup", function() {
+                if (diffTimer) {
+                    clearTimeout(diffTimer);
+                }
+                diffTimer = setTimeout(function() {
+                    diffTimer = undefined;
+                    checkDiff();
+                }, 1000);
+            });
+
+            function checkDiff() {
+                var changes = diff.diff(oldContent, fileEditor.textContent);
+                var inserts = operation_list();
+                var deletes = operation_list();
+                var previousTimestamp = stamper.getLastRemote();
+                var timestamp = stamper.stampLocal();
+                var deleteIndex = 0;
+                var insertIndex = 0;
+                var shouldSend = false;
+                changes.forEach(function(change){
+                    if (change.added) {
+                        shouldSend = true;
+                        inserts.push({
+                            position: insertIndex,
+                            value: change.value,
+                            timestamp: timestamp,
+                            siteID: siteID
+                        });
+                        deleteIndex += change.count;
+                        insertIndex += change.count;
+                    } else if (change.removed) {
+                        shouldSend = true;
+                        deletes.push({
+                            position: deleteIndex,
+                            length: change.count,
+                            timestamp: timestamp
+                        });
+                        insertIndex += change.count;
+                    } else {
+                        deleteIndex += change.count;
+                        insertIndex += change.count;
+                    }
+                });
+                if (shouldSend) {
+                    fileUpdater.sendChanges(inserts, deletes, previousTimestamp, [
+                        [timestamp, siteID, timestamp]
+                    ]);
+                    oldContent = fileEditor.textContent;
+                    console.log("Old content", oldContent);
+                }
+            }
 
             function getPathWith(filename) {
                 var result = [];
@@ -69,6 +127,14 @@
 
                 } else {
                     fileElement.className = "file_entry";
+                    fileElement.addEventListener("click", function() {
+                        currentFile = file;
+                        fileUpdater = FileUpdater(siteID, file.id, session, stamper, fileEditor, function() {
+                            oldContent = fileEditor.textContent;
+                            console.log("Old content", oldContent);
+                        });
+
+                    });
                     removeElement.addEventListener("click", function (event) {
                         removeFile(file.filename);
                         event.stopPropagation();
@@ -126,15 +192,24 @@
                 renderCurrentFiles();
             }
 
-
+            stamper = Stamper(siteID);
             session.call("ca.kitchen.get_all_files").then(
                 function(result) {
-                    initializeApplication(2, result.kwargs.files);
+                    initializeApplication(siteID, result.kwargs.files);
                 }
             );
             session.subscribe("ca.kitchen.file_updates", function(args, kwargs) {
-                fileset.integrateRemote(kwargs);
-                renderCurrentFiles();
+                if (kwargs.type === "update") {
+                    if (fileUpdater && currentFile.id.siteID == kwargs.site_id && currentFile.id.id == kwargs.id) {
+                        checkDiff();
+                        fileUpdater.integrateUpdate(kwargs);
+                        oldContent = fileEditor.textContent;
+                        console.log("Old content", oldContent);
+                    }
+                } else {
+                    fileset.integrateRemote(kwargs);
+                    renderCurrentFiles();
+                }
             });
         };
         connection.open();
