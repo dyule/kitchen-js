@@ -11,11 +11,26 @@
     <script type="application/javascript" src="src/id_lookup.js"></script>
     <script type="application/javascript" src="src/fileset.js"></script>
     <script type="application/javascript" src="src/kitchen.js"></script>
+    <link rel="stylesheet" href="styles/kitchen.css" />
 </head>
 <body>
-    <div id="path"></div>
-    <div id="control_panel"><input type="button" id="add_file" value="Add File" /><input type="button" id="add_folder" value="Add Folder"/><input type="button" id="up_level" value="Up One Level"/></div>
-    <div id="file_list"></div>
-<div contenteditable="true" id="file_editor"></div>
+    <div class="content">
+        <h1 class="title">Kitchen</h1>
+        <div id="sync_error">Synchronization Error.  Your page is being reloaded.</div>
+        <div class="panels">
+            <div class="left_panel">
+                <div>Path: <span id="path"></span></div>
+                <div id="control_panel"><input type="button" id="add_file" value="Add File" /><input type="button" id="add_folder" value="Add Folder" /><input type="button" id="up_level" value="Up One Level" /></div>
+                <div id="file_list"></div>
+            </div>
+            <div class="right_panel">
+                <div id="editor_area">
+                    <div id="filename_title"></div>
+                    <div contenteditable="true" id="file_editor">Some content</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </body>
 </html>

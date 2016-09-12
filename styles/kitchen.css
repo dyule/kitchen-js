@@ -1,0 +1,125 @@
+body {
+    background-color: #95bb9a;
+}
+
+#sync_error {
+    background-color: #ff2f33;
+    font-family: sans-serif;
+    text-align: center;
+    font-size: x-large;
+    padding: 10px 0;
+    max-width: 1125px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.content {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.title {
+    font-family: sans-serif;
+    background-color: #d0d0d0;
+    border-radius: 15px;
+    padding: 10px;
+    max-width: 1105px;
+}
+
+.panels {
+
+}
+
+.left_panel {
+    display: inline-block;
+    border-radius: 15px;
+    padding: 10px;
+    background-color: #8da2bb;
+    clear: none;
+    vertical-align: top;
+}
+
+.right_panel {
+    display: inline-block;
+    border-radius: 15px;
+    padding: 10px 10px 10px 10px;
+    background-color: #bb899c;
+    margin-left: 10px;
+    clear: none;
+    vertical-align: top;
+}
+
+
+#path {
+    min-height: 1em;
+    font-family: sans-serif;
+}
+
+#control_panel {
+    margin: 10px 0 10px 0;
+}
+
+#file_list {
+    background-color: white;
+    border-radius: 15px;
+    min-height: 600px;
+    min-width: 400px;
+    box-shadow: black 3px 3px;
+    padding: 20px;
+}
+#file_list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#editor_area {
+    visibility: hidden;
+}
+
+#filename_title {
+    margin: 10px 0 30px 20px;
+    font-size: large;
+    font-family: sans-serif;
+}
+
+#file_editor {
+    min-height: 600px;
+    min-width: 600px;
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: black 3px 3px;
+    padding: 15px;
+}
+
+li.file_entry, li.folder_entry {
+    position: relative;
+    cursor: pointer;
+    padding: 5px 5px;
+    margin: 5px 0;
+}
+
+.remove {
+    display: inline-block;
+    right: 5px;
+    position: absolute;
+    font-size: small;
+    font-weight: bold;
+    color: red;
+    font-family: "Arial Black", sans-serif;
+}
+
+.inbetween {
+    height: 0;
+    width: 80%;
+    border-bottom: 1px solid #DDDDDD;
+    margin: 0 auto;
+}
+
+.selected {
+    background-color: #b7ecff;
+}
+
+#editor_area.active {
+    visibility: visible;
+}

@@ -60,7 +60,7 @@
                     siteID: remote.site_id,
                     id: remote.id
                 }, remote.state_site_id);
-                file.filename = remote.filename;
+                file.filename = remote.value;
                 file.printedFilename = actualFilename;
                 file.timestamp = remote.timestamp;
             }

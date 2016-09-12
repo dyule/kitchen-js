@@ -14,6 +14,7 @@
             var oldContent = "";
             var diffTimer;
             var siteID = 2;
+            var fileSelected;
             var fileEditor = document.getElementById("file_editor");
             fileEditor.addEventListener("keyup", function() {
                 if (diffTimer) {
@@ -78,6 +79,9 @@
             function renderCurrentFiles() {
                 var fileContainer = document.createElement("ul");
                 var files = fileset.getFiles(currentPath);
+                var editorArea = document.getElementById("editor_area");
+                fileSelected = false;
+
                 files.sort(function(a, b){
                     if (a.type !== b.type) {
                         if (a.type === "folder") {
@@ -95,29 +99,46 @@
                 });
                 var index;
                 for (index = 0; index < files.length; index += 1) {
+                    if (index !==  0) {
+                        fileContainer.appendChild(createInbetweener());
+                    }
                     fileContainer.appendChild(renderFile(files[index]));
                 }
                 var listContainer = document.getElementById("file_list");
                 listContainer.innerHTML = "";
                 listContainer.appendChild(fileContainer);
-                document.getElementById("path").textContent = currentPath.join("/");
+                document.getElementById("path").textContent = "/" + currentPath.join("/");
                 if (currentPath.length === 0) {
-                    document.getElementById("up_level").style.display="none";
+                    document.getElementById("up_level").style.visibility="hidden";
                 } else {
-                    document.getElementById("up_level").style.display="block";
+                    document.getElementById("up_level").style.visibility="visible";
                 }
+
+                if (!fileSelected) {
+                    currentFile = undefined;
+                    editorArea.className = "";
+                } else {
+                    editorArea.className = "active";
+                }
+
             }
 
             function renderFile(file) {
                 var fileElement = document.createElement("li");
-                fileElement.textContent = file.filename;
+                var filenameElement = document.createElement("span");
+                filenameElement.textContent = file.filename;
+                filenameElement.className = "filename";
                 var removeElement = document.createElement("div");
+                fileElement.appendChild(filenameElement);
                 removeElement.className = "remove";
                 removeElement.textContent = "X";
+
                 if (file.type === "folder") {
                     fileElement.className = "folder_entry";
                     fileElement.addEventListener("click", function() {
                        currentPath = getPathWith(file.filename);
+                        currentFile = undefined;
+                        fileUpdater = undefined;
                         renderCurrentFiles();
                     });
                     removeElement.addEventListener("click", function (event) {
@@ -126,13 +147,15 @@
                     });
 
                 } else {
-                    fileElement.className = "file_entry";
+                    if (currentFile !== undefined && currentFile.id.siteID === file.id.siteID && currentFile.id.id === file.id.id) {
+                        fileElement.className = "file_entry selected";
+                        document.getElementById("filename_title").textContent = file.filename;
+                        fileSelected = true;
+                    } else {
+                        fileElement.className = "file_entry";
+                    }
                     fileElement.addEventListener("click", function() {
-                        currentFile = file;
-                        fileUpdater = FileUpdater(siteID, file.id, session, stamper, fileEditor, function() {
-                            oldContent = fileEditor.textContent;
-                            console.log("Old content", oldContent);
-                        });
+                        selectFile(file);
 
                     });
                     removeElement.addEventListener("click", function (event) {
@@ -144,11 +167,48 @@
                 return fileElement;
             }
 
+            function createInbetweener() {
+                var inbetween = document.createElement("li");
+                inbetween.className = "inbetween";
+                return inbetween;
+            }
+
+            function selectFile(file) {
+                currentFile = file;
+                fileUpdater = FileUpdater(siteID, file.id, session, stamper, fileEditor, function() {
+                    oldContent = fileEditor.textContent;
+                    console.log("Old content", oldContent);
+                    renderCurrentFiles();
+                });
+            }
+
+            function updateClasses() {
+                var fileList = document.getElementById("file_list").firstChild;
+
+                for (var childIndex in fileList.childNodes) {
+                    var child = fileList.childNodes[childIndex];
+                    if (child.className === "file_entry" || child.className === "file_entry selected") {
+                        if (currentFile !== undefined && child.firstChild.textContent === currentFile.filename) {
+                            child.className = "file_entry selected";
+
+                        } else {
+                            child.className = "file_entry";
+                        }
+                    }
+                }
+            }
+
             function addFile() {
                 var filename = prompt("Enter filename");
                 var filepath = getPathWith(filename);
                 var operation = fileset.addFile(filepath);
                 sendOperation(operation);
+                selectFile({
+                   id: {
+                       siteID: operation.site_id,
+                       id: operation.id
+                   }
+                });
                 renderCurrentFiles();
             }
 
@@ -181,6 +241,7 @@
 
             function upOneLevel() {
                 currentPath.pop();
+                currentFile = undefined;
                 renderCurrentFiles();
             }
 
@@ -195,7 +256,12 @@
             stamper = Stamper(siteID);
             session.call("ca.kitchen.get_all_files").then(
                 function(result) {
-                    initializeApplication(siteID, result.kwargs.files);
+                    var files = result.kwargs.files;
+                    session.call("ca.kitchen.get_id").then(
+                        function(result) {
+                            initializeApplication(result, files);
+                        }
+                    );
                 }
             );
             session.subscribe("ca.kitchen.file_updates", function(args, kwargs) {

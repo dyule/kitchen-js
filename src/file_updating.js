@@ -2,6 +2,46 @@
     global.FileUpdater = function(siteID, fileID, session, stamper, textBox, onInit) {
         var engine = global.engine();
 
+        function getSelection(textBox) {
+            var textNode = textBox.firstChild;
+            var selection = document.getSelection();
+            var anchor;
+            var focus;
+            if (selection.anchorNode === textNode) {
+                anchor = selection.anchorOffset;
+            }
+            if (selection.focusNode === textNode) {
+                focus = selection.focusOffset;
+            }
+            return {
+                start: anchor,
+                end: focus
+            };
+
+        }
+
+        function setSelection(textBox, start, end) {
+            var textNode = textBox.firstChild;
+            if (start === undefined && end === undefined) {
+                return;
+            }
+            var range = document.createRange();
+            if (start === undefined) {
+                range.setStart(textNode, end);
+            } else {
+                range.setStart(textNode, start);
+            }
+
+            if (end === undefined) {
+                range.setEnd(textNode, start);
+            } else {
+                range.setEnd(textNode, end);
+            }
+            var selection = document.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
         function applySequence(sequence, textBox) {
             // TODO Implement UTF-8 aware strings
             var fileInsert = {
@@ -9,8 +49,7 @@
                 index: 0
             };
             var insertStack = [fileInsert];
-            var selectionStart = textBox.selectionStart;
-            var selectionEnd = textBox.selectionEnd;
+            var selection = getSelection(textBox);
             var buffer = "";
             var currentDelete = 0;
             var insertNode = sequence.inserts.head;
@@ -45,10 +84,10 @@
                     currentInsert = insertStack[insertStack.length - 1];
                 } else {
                     if (insertStack.length == 1) {
-                        if (insertStack[0].index === selectionStart) {
+                        if (insertStack[0].index === selection.start) {
                             newSelectionStart = deleteIndex;
                         }
-                        if (insertStack[0].index === selectionEnd) {
+                        if (insertStack[0].index === selection.end) {
                             newSelectionEnd = deleteIndex;
                         }
                     }
@@ -67,8 +106,7 @@
 
             }
             textBox.textContent = buffer;
-            textBox.selectionStart = newSelectionStart;
-            textBox.selectionEnd = newSelectionEnd;
+            setSelection(textBox, newSelectionStart, newSelectionEnd);
 
         }
 
@@ -89,6 +127,15 @@
             engine.integrateRemote(sequence, lookup, stamper);
             textBox.textContent = "";
             applySequence(sequence, textBox);
+            if (textBox.textContent === "") {
+                var range = document.createRange();
+                var selection = document.getSelection();
+                range.selectNodeContents(textBox);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } else {
+                setSelection(textBox, 0, 0);
+            }
             onInit();
 
         });
@@ -124,6 +171,13 @@
                     id: fileID.id,
                     lookup: lookup,
                     type: "update"
+                });
+                // TODO This is a hack to get around the fact that sometimes the web client sends updates based on operations no other client has.
+                session.call("ca.kitchen.check_timestamp", [], {site_id: lookup[0][1], timestamp: lookup[0][2]}).then(function(found) {
+                    if (!found) {
+                        document.getElementById("sync_error").style.display = "block";
+                        window.location.reload();
+                    }
                 });
             }
         }
